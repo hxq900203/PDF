@@ -1,1 +1,1 @@
-from .converters import pdf_image  # noqa: F401  导入即注册
+from .converters import pdf_excel, pdf_image, pdf_word  # noqa: F401  导入即注册
