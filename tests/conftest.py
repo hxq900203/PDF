@@ -98,3 +98,15 @@ def corrupt_pdf(tmp_path) -> Path:
     path = tmp_path / "损坏.pdf"
     path.write_bytes(b"not a pdf")
     return path
+
+
+@pytest.fixture
+def zero_page_pdf(tmp_path) -> Path:
+    body = (b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            b"2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\n")
+    xref_pos = len(body)
+    data = body + (b"xref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n"
+                   b"trailer<</Size 3/Root 1 0 R>>\nstartxref\n" + str(xref_pos).encode() + b"\n%%EOF\n")
+    path = tmp_path / "零页.pdf"
+    path.write_bytes(data)
+    return path

@@ -18,7 +18,7 @@ def setup_logging() -> Path:
     path = log_dir() / "app.log"
     path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        filename=path, encoding="utf-8", level=logging.INFO,
+        filename=path, encoding="utf-8", level=logging.INFO, force=True,  # pdf2docx 导入时已配置过 root logger
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     return path

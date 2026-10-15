@@ -13,7 +13,7 @@ window.pywebview = { api: {
   describe: async ps => ps.map(p => ({path:p, name:p.split('/').pop(), format:fmt(p), label: fmt(p)?LAB[fmt(p)]:null})),
   get_targets: async ps => { let s=null; for (const p of ps){const t=T[fmt(p)]; s = s? s.filter(x=>t.includes(x)) : t.slice();}
      return ['pdf','word','image','excel'].filter(k => (s||[]).includes(k)).map(k=>({key:k,label:LAB[k]})); },
-  pick_files: async () => [], pick_folder: async () => 'D:/输出',
+  pick_files: async () => [], pick_folder: async () => { window.__picks = (window.__picks||0)+1; return 'D:/输出' + window.__picks; },
   start: async (...a) => { window.__calls.push(a); }, open_folder: async () => {},
 }};
 """
@@ -49,6 +49,20 @@ with sync_playwright() as p:
                    window.onBackendEvent({type:'finished',ok:1,failed:1,out_dir:'C:/a'});""")
     assert "完成 1 个，失败 1 个" in pg.inner_text("#summary")
     assert pg.is_visible("#open-out") and not pg.is_disabled("#start")
+    # I-5: 再次转换只处理未完成的文件
+    pg.evaluate("window.addFiles(['C:/a/新.pdf'])"); pg.wait_for_timeout(100)
+    pg.click("#start")
+    calls = pg.evaluate("window.__calls")
+    assert calls[-1][0] == ["C:/a/损坏.pdf", "C:/a/新.pdf"], calls[-1]
+    assert "完成" in pg.inner_text("#files li:nth-child(1)")
+    pg.evaluate("window.onBackendEvent({type:'status',index:0,state:'error',message:'x'});"
+                "window.onBackendEvent({type:'status',index:1,state:'done',outputs:[]});"
+                "window.onBackendEvent({type:'finished',ok:1,failed:1,out_dir:'C:/a'})")
+    assert "❌ x" in pg.inner_text("#files li:nth-child(2)") and "完成" in pg.inner_text("#files li:nth-child(3)")
+    # M-4: 已选“指定文件夹”时再次点击可重新选择
+    pg.click('input[name="out"][value="custom"]'); pg.wait_for_timeout(100)
+    pg.click('input[name="out"][value="custom"]'); pg.wait_for_timeout(100)
+    assert pg.inner_text("#out-path") == "D:/输出2", pg.inner_text("#out-path")
     sw = pg.evaluate("document.documentElement.scrollWidth")
     assert sw <= 720, f"horizontal scroll {sw}"
     pg.set_viewport_size({"width": 900, "height": 680})

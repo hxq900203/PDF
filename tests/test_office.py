@@ -48,3 +48,22 @@ def test_bundled_preferred(monkeypatch, tmp_path):
     exe.touch()
     monkeypatch.setattr(office, "app_dir", lambda: tmp_path)
     assert find_soffice() == exe
+
+
+@pytest.mark.parametrize("name,data", [
+    ("空.docx", b""), ("文本.docx", "这是文本".encode()), ("文本.xlsx", b"plain text"),
+    ("文本.doc", b"plain text"), ("空.xls", b""),
+])
+def test_disguised_office_rejected(tmp_path, name, data):
+    f = tmp_path / name
+    f.write_bytes(data)
+    with pytest.raises(ConversionError, match="已损坏"):
+        office_to_pdf(f, tmp_path / "o", Options())
+
+
+def test_legacy_doc_magic_accepted(monkeypatch, tmp_path):
+    f = tmp_path / "旧.doc"
+    f.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100)
+    monkeypatch.setattr(office, "find_soffice", lambda: None)
+    with pytest.raises(ConversionError, match="未找到 LibreOffice"):  # 通过了预检，才走到查找 soffice
+        office_to_pdf(f, tmp_path / "o", Options())

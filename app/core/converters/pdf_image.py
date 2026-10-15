@@ -29,6 +29,11 @@ def _open_image(path: Path) -> pymupdf.Document:
         raise ConversionError("文件已损坏或无法读取") from e
 
 
+def check_image(path: Path) -> None:
+    """图片无法读取时抛出 ConversionError。"""
+    _open_image(path).close()
+
+
 @register("pdf", "image")
 def pdf_to_image(src: Path, out_dir: Path, opts: Options) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)

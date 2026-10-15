@@ -10,6 +10,7 @@
   }
 
   const valid = () => state.files.filter((f) => f.format);
+  const pending = () => valid().filter((f) => f.state !== "done");
   const allImages = () => valid().length > 0 && valid().every((f) => f.format === "image");
 
   async function refreshTargets() {
@@ -25,7 +26,9 @@
     const fresh = paths.filter((p) => !known.has(p));
     if (!fresh.length) return;
     const info = await api().describe(fresh);
-    for (const f of info) {
+    if (state.busy) return;
+    const now = new Set(state.files.map((f) => f.path));
+    for (const f of info.filter((f) => !now.has(f.path))) {
       state.files.push({ ...f, state: f.format ? "queued" : "error", message: f.format ? "" : "不支持的文件格式" });
     }
     $("summary").textContent = "";
@@ -80,7 +83,7 @@
     document.querySelectorAll("#settings input").forEach((el) => (el.disabled = state.busy));
     $("clear").disabled = state.busy;
     $("out-path").textContent = state.outDir || "";
-    $("start").disabled = state.busy || !state.target || !valid().length;
+    $("start").disabled = state.busy || !state.target || !pending().length;
     $("start").textContent = state.busy ? "转换中…" : "开始转换";
   }
 
@@ -112,18 +115,18 @@
       const b = e.target.closest("button");
       if (b) { state.dpi = Number(b.dataset.dpi); render(); }
     });
-    document.querySelectorAll('input[name="out"]').forEach((r) => r.addEventListener("change", async () => {
-      if (r.value === "custom" && r.checked) {
-        const dir = await api().pick_folder();
+    document.querySelectorAll('input[name="out"]').forEach((r) => r.addEventListener("click", async () => {
+      if (r.value === "custom") {
+        const dir = await api().pick_folder();  // 每次点击都可重新选择
         if (dir) state.outDir = dir;
-        else document.querySelector('input[name="out"][value="same"]').checked = true;
-      } else if (r.value === "same" && r.checked) {
+        if (!state.outDir) document.querySelector('input[name="out"][value="same"]').checked = true;
+      } else {
         state.outDir = null;
       }
       render();
     }));
     $("start").addEventListener("click", () => {
-      const files = valid();
+      const files = pending();  // 已完成的文件不再重复转换
       files.forEach((f) => { f.state = "queued"; f.message = ""; });
       state.running = files;
       state.busy = true;

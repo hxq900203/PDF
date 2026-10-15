@@ -94,3 +94,49 @@ def test_selftest_fail(monkeypatch, tmp_path):
     monkeypatch.setenv("FC_SELFTEST_LOG", str(log))
     assert main(["--selftest"]) == 1
     assert "LibreOffice" in log.read_text(encoding="utf-8")
+
+
+def test_batch_always_finishes(zero_page_pdf, sample_pdf, tmp_path):
+    api, w = make_api()
+    api.run_batch([str(zero_page_pdf), str(sample_pdf)], "image", str(tmp_path / "o"), {})
+    ev = w.events()
+    assert ev[1]["state"] == "error"
+    assert ev[-1] == {"type": "finished", "ok": 1, "failed": 1, "out_dir": str(tmp_path / "o")}
+
+
+def test_batch_finishes_when_emit_fails(monkeypatch, sample_png, tmp_path):
+    api, w = make_api()
+    real = w.evaluate_js
+    def flaky(code):
+        if '"state": "done"' in code:
+            raise RuntimeError("js error")
+        real(code)
+    w.evaluate_js = flaky
+    api.run_batch([str(sample_png)], "pdf", str(tmp_path), {})
+    assert w.events()[-1]["type"] == "finished"
+
+
+def test_merge_with_bad_image(sample_png, tmp_path):
+    bad = tmp_path / "坏.png"
+    bad.write_bytes(b"not an image")
+    out = tmp_path / "o"
+    api, w = make_api()
+    api.run_batch([str(sample_png), str(bad), str(sample_png)], "pdf", str(out), {"merge_images": True})
+    by_index = {e["index"]: e for e in w.events() if e["type"] == "status" and e["state"] != "running"}
+    assert by_index[0]["state"] == "done" and by_index[2]["state"] == "done"
+    assert by_index[1] == {"type": "status", "index": 1, "state": "error", "message": "文件已损坏或无法读取"}
+    (pdf,) = out.glob("*.pdf")
+    import pymupdf
+    assert pymupdf.open(pdf).page_count == 2
+    assert w.events()[-1]["ok"] == 2 and w.events()[-1]["failed"] == 1
+
+
+def test_log_file_written(monkeypatch, tmp_path):
+    import logging
+    from app import logging_setup
+    monkeypatch.setattr(logging_setup, "log_dir", lambda: tmp_path / "logs")
+    path = logging_setup.setup_logging()
+    Api._message(RuntimeError("boom"))
+    for h in logging.getLogger().handlers:
+        h.flush()
+    assert "boom" in path.read_text(encoding="utf-8")

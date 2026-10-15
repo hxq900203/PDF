@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import zipfile
 from pathlib import Path
 
 from ..errors import ConversionError
@@ -35,9 +36,34 @@ def find_soffice() -> Path | None:
     return next((p for p in candidates if p.is_file()), None)
 
 
+OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
+def _check_office_file(src: Path) -> None:
+    """在交给 LibreOffice 前排除空文件和改了扩展名的文件（否则会“成功”产出垃圾 PDF）。"""
+    try:
+        size = src.stat().st_size
+        with open(src, "rb") as f:
+            head = f.read(8)
+    except OSError as e:
+        raise ConversionError("文件已损坏或无法读取") from e
+    ext = src.suffix.lower()
+    if size == 0:
+        ok = False
+    elif ext in (".docx", ".xlsx"):
+        ok = zipfile.is_zipfile(src)
+    elif ext == ".doc":  # Word 也会把 RTF/HTML 存成 .doc
+        ok = head == OLE_MAGIC or head.startswith(b"{\\rtf") or head.lstrip().lower().startswith(b"<")
+    else:  # .xls
+        ok = head == OLE_MAGIC or head.lstrip().lower().startswith(b"<")
+    if not ok:
+        raise ConversionError("文件已损坏或无法读取")
+
+
 @register("word", "pdf")
 @register("excel", "pdf")
 def office_to_pdf(src: Path, out_dir: Path, opts: Options) -> list[Path]:
+    _check_office_file(src)
     soffice = find_soffice()
     if soffice is None:
         raise ConversionError("未找到 LibreOffice 组件，请重新解压完整的软件包")

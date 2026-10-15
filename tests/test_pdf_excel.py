@@ -21,3 +21,9 @@ def test_pdf_to_excel_no_tables(sample_pdf, tmp_path):
 def test_pdf_to_excel_corrupt(corrupt_pdf, tmp_path):
     with pytest.raises(ConversionError, match="已损坏"):
         pdf_to_excel(corrupt_pdf, tmp_path, Options())
+
+
+def test_clean_cell_strips_control_chars():
+    from app.core.converters.pdf_excel import clean_cell
+    assert clean_cell("a\x07b") == "ab"
+    assert clean_cell(None) is None

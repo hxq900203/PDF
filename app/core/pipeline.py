@@ -21,12 +21,14 @@ def convert_file(src: Path, target: str, out_dir: Path | None, opts: Options) ->
         raise ConversionError("不支持转换为该格式")
     out_dir = Path(out_dir) if out_dir else src.parent
 
-    with tempfile.TemporaryDirectory(prefix="fc_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="fc_", ignore_cleanup_errors=True) as tmp:
         current = [src]
         for step, (_, _, convert) in enumerate(route):
             step_dir = Path(tmp) / f"step{step}"
             current = [out for f in current for out in convert(f, step_dir, opts)]
 
+        if not current:
+            raise ConversionError("文件中没有任何页面")
         out_dir.mkdir(parents=True, exist_ok=True)
         ext = OUTPUT_EXT[target]
         if len(current) == 1:

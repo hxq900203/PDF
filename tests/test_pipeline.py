@@ -53,3 +53,8 @@ def test_merge_images(sample_png, tmp_path):
 def test_two_hop_docx_to_png(sample_docx, tmp_path):
     out = convert_file(sample_docx, "image", tmp_path / "o", Options())
     assert [p.name for p in out] == ["中文 样例.png"]
+
+
+def test_zero_page_pdf_raises(zero_page_pdf, tmp_path):
+    with pytest.raises(ConversionError):
+        convert_file(zero_page_pdf, "image", tmp_path / "o", Options())

@@ -6,6 +6,7 @@ import sys
 import threading
 from pathlib import Path
 
+from .core.converters.pdf_image import check_image
 from .core.errors import ConversionError
 from .core.formats import LABELS, detect_format
 from .core.options import Options
@@ -62,47 +63,70 @@ class Api:
     def run_batch(self, paths: list[str], target: str, out_dir: str | None, options: dict) -> None:
         opts = Options.from_dict(options or {})
         out = Path(out_dir) if out_dir else None
-        ok = failed = 0
-        first_dir = None
+        self._ok = self._failed = 0
+        self._first_dir = None
+        try:
+            if target == "pdf" and opts.merge_images and paths and \
+                    all(detect_format(Path(p)) == "image" for p in paths):
+                self._run_merge(paths, out)
+            else:
+                for i, p in enumerate(paths):
+                    self._run_one(i, Path(p), target, out, opts)
+        except Exception:
+            log.exception("批次执行异常")
+        finally:
+            self._emit({"type": "finished", "ok": self._ok, "failed": self._failed,
+                        "out_dir": self._first_dir})
 
-        if target == "pdf" and opts.merge_images and paths and \
-                all(detect_format(Path(p)) == "image" for p in paths):
-            for i in range(len(paths)):
-                self._emit({"type": "status", "index": i, "state": "running"})
+    def _run_one(self, i: int, src: Path, target: str, out: Path | None, opts: Options) -> None:
+        self._emit({"type": "status", "index": i, "state": "running"})
+        try:
+            outputs = convert_file(src, target, out, opts)
+        except Exception as e:
+            self._failed += 1
+            self._emit({"type": "status", "index": i, "state": "error", "message": self._message(e)})
+            return
+        self._ok += 1
+        self._first_dir = self._first_dir or str(outputs[0].parent)
+        self._emit({"type": "status", "index": i, "state": "done",
+                    "outputs": [str(o) for o in outputs]})
+
+    def _run_merge(self, paths: list[str], out: Path | None) -> None:
+        good = []
+        for i, p in enumerate(paths):
+            self._emit({"type": "status", "index": i, "state": "running"})
             try:
-                merged = merge_images_to_pdf([Path(p) for p in paths], out)
-                states = [{"state": "done", "outputs": [str(merged)]}] * len(paths)
-                ok, first_dir = len(paths), str(merged.parent)
+                check_image(Path(p))
+                good.append(i)
             except Exception as e:
-                states = [{"state": "error", "message": self._message(e)}] * len(paths)
-                failed = len(paths)
-            for i, s in enumerate(states):
-                self._emit({"type": "status", "index": i, **s})
-        else:
-            for i, p in enumerate(paths):
-                self._emit({"type": "status", "index": i, "state": "running"})
-                try:
-                    outputs = convert_file(Path(p), target, out, opts)
-                except Exception as e:
-                    failed += 1
-                    self._emit({"type": "status", "index": i, "state": "error",
-                                "message": self._message(e)})
-                    continue
-                ok += 1
-                first_dir = first_dir or str(outputs[0].parent)
-                self._emit({"type": "status", "index": i, "state": "done",
-                            "outputs": [str(o) for o in outputs]})
-
-        self._emit({"type": "finished", "ok": ok, "failed": failed, "out_dir": first_dir})
+                self._failed += 1
+                self._emit({"type": "status", "index": i, "state": "error", "message": self._message(e)})
+        if not good:
+            return
+        try:
+            merged = merge_images_to_pdf([Path(paths[i]) for i in good], out)
+        except Exception as e:
+            self._failed += len(good)
+            for i in good:
+                self._emit({"type": "status", "index": i, "state": "error", "message": self._message(e)})
+            return
+        self._ok += len(good)
+        self._first_dir = str(merged.parent)
+        for i in good:
+            self._emit({"type": "status", "index": i, "state": "done", "outputs": [str(merged)]})
 
     @staticmethod
     def _message(e: Exception) -> str:
         if isinstance(e, ConversionError):
             return str(e)
-        log.exception("未预期的转换错误")
+        log.error("未预期的转换错误", exc_info=e)
         return f"转换失败：{type(e).__name__}"
 
     def _emit(self, event: dict) -> None:
-        if self._window is not None:
+        if self._window is None:
+            return
+        try:
             self._window.evaluate_js(
                 f"window.onBackendEvent({json.dumps(event, ensure_ascii=False)})")
+        except Exception:
+            log.exception("推送界面事件失败")
