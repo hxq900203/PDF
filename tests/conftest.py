@@ -5,11 +5,12 @@ import openpyxl
 import pymupdf
 import pytest
 
-import shutil
+from app.core.converters.office import find_soffice
+
 
 NAME = "中文 样例"
 
-needs_soffice = pytest.mark.skipif(shutil.which("soffice") is None, reason="无 LibreOffice")
+needs_soffice = pytest.mark.skipif(find_soffice() is None, reason="无 LibreOffice")
 
 
 def _write_text(page, point, text):
