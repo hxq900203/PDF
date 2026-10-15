@@ -26,6 +26,8 @@ def selftest() -> int:
 
     log = Path(os.environ.get("FC_SELFTEST_LOG") or app_dir() / "selftest.log")
     try:
+        if sys.platform == "win32":
+            import clr  # noqa: F401  验证界面依赖的 pythonnet 能加载
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "自检.docx"
             d = docx.Document()
