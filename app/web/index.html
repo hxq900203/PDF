@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文件转换器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>文件转换器</h1>
+      <p class="sub">Word · PDF · PNG · Excel 互相转换，全部在本机完成</p>
+    </header>
+
+    <section id="drop" class="drop" tabindex="0" role="button">
+      <div class="drop-icon" aria-hidden="true">⇩</div>
+      <div class="drop-title">把文件拖到这里，或点击添加</div>
+      <div class="drop-hint">支持 .docx .doc .xlsx .xls .pdf .png .jpg</div>
+    </section>
+
+    <section class="card files-card" id="files-card" hidden>
+      <div class="card-head">
+        <h2>文件 <span id="file-count" class="count"></span></h2>
+        <button id="clear" class="link">清空</button>
+      </div>
+      <ul id="files" class="files"></ul>
+    </section>
+
+    <section class="card settings" id="settings" hidden>
+      <div class="row">
+        <div class="row-label">转换为</div>
+        <div id="targets" class="seg"></div>
+        <div id="no-targets" class="muted" hidden>这些文件没有共同可转换的格式</div>
+      </div>
+      <div class="row">
+        <div class="row-label">保存到</div>
+        <div class="out">
+          <label class="radio"><input type="radio" name="out" value="same" checked> 和原文件相同</label>
+          <label class="radio"><input type="radio" name="out" value="custom"> 指定文件夹…</label>
+          <span id="out-path" class="path"></span>
+        </div>
+      </div>
+      <div class="row" id="dpi-row" hidden>
+        <div class="row-label">清晰度</div>
+        <div class="seg" id="dpi">
+          <button data-dpi="150">标准 150</button>
+          <button data-dpi="200" class="on">高清 200</button>
+          <button data-dpi="300">超清 300</button>
+        </div>
+      </div>
+      <div class="row" id="merge-row" hidden>
+        <div class="row-label"></div>
+        <label class="check"><input type="checkbox" id="merge"> 合并为一个 PDF</label>
+      </div>
+    </section>
+
+    <footer class="actions" id="actions" hidden>
+      <div id="summary" class="summary"></div>
+      <button id="open-out" class="ghost" hidden>打开输出文件夹</button>
+      <button id="start" class="primary" disabled>开始转换</button>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
