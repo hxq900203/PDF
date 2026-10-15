@@ -28,7 +28,9 @@ jobs:
         run: python -m pytest -v
 
       - name: PyInstaller 打包
-        run: pyinstaller build/file_converter.spec --distpath build/dist --workpath build/work --noconfirm
+        run: |
+          pyinstaller build/file_converter.spec --distpath build/dist --workpath build/work --noconfirm
+          Copy-Item build/app.exe.config "build/dist/$env:APP/$env:APP.exe.config"
 
       - name: 缓存 LibreOffice 安装包
         id: lo-cache
