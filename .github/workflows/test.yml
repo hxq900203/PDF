@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安装 LibreOffice 与中文字体
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc fonts-noto-cjk
+      - name: 安装依赖
+        run: pip install PyMuPDF pdf2docx pdfplumber openpyxl python-docx pytest
+      - name: 运行测试
+        run: python -m pytest -v

@@ -1,0 +1,73 @@
+name: build-windows
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+env:
+  LO_VERSION: 26.2.6.3
+  APP: 文件转换器
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -r requirements-dev.txt
+
+      - name: 运行测试（LibreOffice 相关测试此时自动跳过）
+        run: python -m pytest -v
+
+      - name: PyInstaller 打包
+        run: pyinstaller build/file_converter.spec --distpath build/dist --workpath build/work --noconfirm
+
+      - name: 缓存 LibreOffice 安装包
+        id: lo-cache
+        uses: actions/cache@v4
+        with:
+          path: LibreOffice.msi
+          key: libreoffice-msi-${{ env.LO_VERSION }}
+
+      - name: 下载 LibreOffice
+        if: steps.lo-cache.outputs.cache-hit != 'true'
+        run: |
+          $url = "https://downloadarchive.documentfoundation.org/libreoffice/old/$env:LO_VERSION/win/x86_64/LibreOffice_$($env:LO_VERSION)_Win_x86-64.msi"
+          Invoke-WebRequest -Uri $url -OutFile LibreOffice.msi
+
+      - name: 解包 LibreOffice 到软件目录
+        run: |
+          $extract = Join-Path $PWD "lo_extract"
+          $p = Start-Process msiexec.exe -ArgumentList "/a", "`"$PWD\LibreOffice.msi`"", "/qn", "TARGETDIR=`"$extract`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "msiexec 失败：$($p.ExitCode)" }
+          $soffice = Get-ChildItem $extract -Recurse -Filter soffice.exe | Select-Object -First 1
+          if (-not $soffice) { throw "解包后未找到 soffice.exe" }
+          $loRoot = $soffice.Directory.Parent.FullName
+          Move-Item $loRoot "build/dist/$env:APP/libreoffice"
+          if (-not (Test-Path "build/dist/$env:APP/libreoffice/program/soffice.exe")) { throw "libreoffice/program/soffice.exe 不存在" }
+
+      - name: 自检（打包后的程序把 docx 转为 PDF）
+        run: |
+          $exe = Resolve-Path "build/dist/$env:APP/$env:APP.exe"
+          $p = Start-Process $exe -ArgumentList "--selftest" -Wait -PassThru
+          $log = "build/dist/$env:APP/selftest.log"
+          if (Test-Path $log) { Get-Content $log -Encoding utf8 }
+          if ($p.ExitCode -ne 0 -or (Get-Content $log -Encoding utf8) -ne "OK") { throw "自检失败（退出码 $($p.ExitCode)）" }
+          Remove-Item $log
+
+      - name: 压缩
+        run: Compress-Archive -Path "build/dist/$env:APP" -DestinationPath "$env:APP-windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP }}-windows
+          path: ${{ env.APP }}-windows.zip
+          retention-days: 30
