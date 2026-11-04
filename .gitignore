@@ -5,3 +5,4 @@ __pycache__/
 build/dist/
 build/work/
 *.egg-info
+.download/
