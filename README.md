@@ -60,7 +60,7 @@ GitHub → **Actions** → 最新一次成功的 **build-gongwen** → 页面底
 
 ```bash
 pip install python-docx pywebview pytest
-python -m pytest tests/gongwen
+python -m pytest tests/gongwen --confcutdir=tests/gongwen
 python -m gongwen.main            # 启动界面
 python -m gongwen.main --selftest
 ```

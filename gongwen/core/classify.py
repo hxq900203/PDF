@@ -12,7 +12,7 @@ _CN = "一二三四五六七八九十"
 H1 = re.compile(rf"^[{_CN}]+\s*、")
 H2 = re.compile(rf"^[（(][{_CN}]+[）)]")
 H3 = re.compile(r"^(?:\d+\s*[、．]|\d+\.(?!\d)|[（(]\d+[）)])\s*")  # 1、 1． 1. （1）；不含 1.5
-DATE = re.compile(r"^(?:\d{4}年\d{1,2}月\d{1,2}日|[〇零一二三四五六七八九]{4}年[一二三四五六七八九十]{1,3}月[一二三四五六七八九十]{1,3}日)$")
+DATE = re.compile(r"^(?:\d{4}年\d{1,2}月\d{1,2}日|[〇○Ｏ０零一二三四五六七八九]{4}年[一二三四五六七八九十]{1,3}月[一二三四五六七八九十]{1,3}日)$")
 ATTACH_HEAD = ("附件", "附件：", "附件:")
 ATTACH_INLINE = re.compile(r"^附件[：:]\s*(.+)$")
 NO_END = tuple("。；，：:！？")
@@ -68,20 +68,28 @@ def classify(blocks: list[Block]) -> Document:
     # 其余：附件区、序号标题、正文
     out: list[Block] = []
     in_attach = False
+    attach_items = 0  # 当前附件区已有的项数
     for i, b in enumerate(blocks):
         if labels[i] is None:
             t = b.text
             if t in ATTACH_HEAD:
-                in_attach = True
+                in_attach, attach_items = True, 0
                 continue  # “附件”行导出时自动生成
             m = ATTACH_INLINE.match(t)
             if m:
-                in_attach = False
-                b = Block("attachment", m.group(1))
-                out.append(b)
+                item = m.group(1)
+                # “附件：1.《量表》”后面可能还有“2.《说明》”
+                in_attach, attach_items = bool(H3.match(item)), 1
+                out.append(Block("attachment", H3.sub("", item, count=1)))
                 continue
             if in_attach and H3.match(t):
+                attach_items += 1
                 out.append(Block("attachment", H3.sub("", t, count=1)))
+                continue
+            if in_attach and attach_items == 0 and labels[i] is None and not _numbered(t):
+                # “附件：”下面只有一项且不带序号
+                in_attach = False
+                out.append(Block("attachment", t))
                 continue
             in_attach = False
             labels[i] = _heading(t)

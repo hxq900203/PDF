@@ -164,5 +164,6 @@ def build_docx(doc: Document, out: Path) -> Path:
 
 def default_filename(doc: Document) -> str:
     title = "".join(b.text for b in doc.blocks if b.t == "title")
-    title = re.sub(r'[\\/:*?"<>|]', "", title).strip()
+    title = re.sub(r'[\\/:*?"<>|\x00-\x1f\x7f]', "", title).strip()
+    title = title[:80].rstrip(". ")  # Windows 不允许以点或空格结尾；避免路径过长
     return f"{title or '公文'}.docx"

@@ -1,9 +1,17 @@
+import re
 from dataclasses import dataclass
 
 from .errors import GongwenError
 
 TYPES = ("title", "addressee", "h1", "h2", "h3", "body", "attachment", "signer", "date", "table")
 KINDS = ("notice", "brief")  # 通知 / 信息简报
+
+_INVALID = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def clean_text(s: str) -> str:
+    """去掉 Word（XML）不允许的控制字符。"""
+    return _INVALID.sub("", s)
 
 
 @dataclass
@@ -23,8 +31,8 @@ class Block:
         if t not in TYPES:
             raise GongwenError("段落类型无效")
         if t == "table":
-            return cls("table", rows=[[str(c) for c in row] for row in d.get("rows") or []])
-        return cls(t, str(d.get("text", "")))
+            return cls("table", rows=[[clean_text(str(c)) for c in row] for row in d.get("rows") or []])
+        return cls(t, clean_text(str(d.get("text", ""))))
 
 
 @dataclass

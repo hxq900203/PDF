@@ -24,7 +24,7 @@ jobs:
         run: pip install python-docx pywebview pytest pyinstaller
 
       - name: 运行测试
-        run: python -m pytest tests/gongwen -v
+        run: python -m pytest tests/gongwen -v --confcutdir=tests/gongwen  # 不加载文件转换器的 tests/conftest.py
 
       - name: PyInstaller 打包
         run: |

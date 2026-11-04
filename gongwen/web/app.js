@@ -6,7 +6,7 @@
   const state = { doc: null, selected: null, busy: false };
 
   // ---- 工具 ----
-  const DIG = { "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  const DIG = { "〇": 0, "○": 0, "Ｏ": 0, "０": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
   function small(s) {
     if (!s.includes("十")) return s.length === 1 && s in DIG ? DIG[s] : null;
     const [tens, ones] = s.split("十");
@@ -15,7 +15,7 @@
   }
   // 与 gongwen/core/dates.py 规则一致
   function normalizeDate(s) {
-    const m = s.trim().match(/^([〇零一二三四五六七八九]{4})年([一二三四五六七八九十]{1,3})月([一二三四五六七八九十]{1,3})日$/);
+    const m = s.trim().match(/^([〇○Ｏ０零一二三四五六七八九]{4})年([一二三四五六七八九十]{1,3})月([一二三四五六七八九十]{1,3})日$/);
     if (!m) return s;
     const y = [...m[1]].map((c) => DIG[c]).join(""), mo = small(m[2]), d = small(m[3]);
     if (mo === null || d === null || mo < 1 || mo > 12 || d < 1 || d > 31) return s;
@@ -72,6 +72,13 @@
         const tx = el("div", "text", b.text);
         tx.contentEditable = "plaintext-only";
         tx.addEventListener("input", () => { b.text = tx.textContent.replace(/\n/g, ""); renderPreview(); });
+        // 一行就是一段：回车不换行；粘贴多行文字时合并成一行插入
+        tx.addEventListener("keydown", (e) => { if (e.key === "Enter") e.preventDefault(); });
+        tx.addEventListener("paste", (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData.getData("text/plain") || "").replace(/[\r\n\v\f]+/g, "");
+          document.execCommand("insertText", false, text);
+        });
         li.append(sel, tx);
       }
       const del = el("button", "del", "×");

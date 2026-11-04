@@ -71,6 +71,15 @@ with sync_playwright() as p:
     pg.wait_for_timeout(50)
     assert "（已改）" in pg.inner_text("#page")
 
+    # 在行内按回车不会产生预览里看不到的换行
+    pg.click("#blocks .row:nth-child(4) .text")
+    pg.keyboard.press("End")
+    pg.keyboard.press("Enter")
+    pg.keyboard.type("续")
+    pg.wait_for_timeout(50)
+    row_text = pg.inner_text("#blocks .row:nth-child(4) .text")
+    assert "\n" not in row_text and row_text.endswith("（已改）续"), repr(row_text)
+
     # 删除一行
     pg.click("#blocks .row:nth-child(4) .del")
     pg.wait_for_timeout(50)

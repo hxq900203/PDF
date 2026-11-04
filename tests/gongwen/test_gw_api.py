@@ -1,5 +1,7 @@
 import logging
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import docx
 from samples import NOTICE
@@ -63,6 +65,11 @@ def test_invalid_doc_dict(tmp_path):
     assert Api().export_to({"kind": "x", "blocks": []}, str(tmp_path / "a.docx")) == {"error": "文种无效"}
 
 
+def fake_webview(monkeypatch):
+    """CI 的 test 流水线没装 pywebview；对话框只用到 FileDialog 常量。"""
+    monkeypatch.setitem(sys.modules, "webview", SimpleNamespace(FileDialog=SimpleNamespace(OPEN=10, FOLDER=20, SAVE=30)))
+
+
 class FakeWindow:
     def __init__(self, result):
         self.result, self.kwargs = result, None
@@ -72,7 +79,8 @@ class FakeWindow:
         return self.result
 
 
-def test_export_dialog(tmp_path):
+def test_export_dialog(monkeypatch, tmp_path):
+    fake_webview(monkeypatch)
     api = Api()
     w = FakeWindow(str(tmp_path / "x.docx"))
     api.attach(w)
@@ -82,7 +90,8 @@ def test_export_dialog(tmp_path):
     assert api.export(doc_dict()) == {"cancelled": True}
 
 
-def test_export_dialog_adds_suffix(tmp_path):
+def test_export_dialog_adds_suffix(monkeypatch, tmp_path):
+    fake_webview(monkeypatch)
     api = Api()
     api.attach(FakeWindow((str(tmp_path / "无后缀"),)))
     assert api.export(doc_dict())["path"].endswith("无后缀.docx")
