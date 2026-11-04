@@ -36,3 +36,34 @@ python -m app.main --selftest
 
 - 日志：`%LOCALAPPDATA%\文件转换器\logs\app.log`
 - 设计文档：`docs/superpowers/specs/2026-10-15-file-converter-design.md`
+
+---
+
+# 公文排版
+
+单独的 Windows 桌面软件：把已有 Word 或粘贴的文字，一键排成本单位公文格式（方正小标宋标题、仿宋_GB2312 正文、黑体 / 楷体层级标题，固定行距 26 磅），先预览、可修改，再导出 .docx。
+
+## 下载
+
+GitHub → **Actions** → 最新一次成功的 **build-gongwen** → 页面底部 **Artifacts** 下载 `公文排版-windows`，解压后双击 `公文排版/公文排版.exe`。
+
+## 使用
+
+1. 点「打开 Word」或把 .docx 拖进窗口；也可以点「粘贴文字」。
+2. 左侧每段旁边是自动识别的类型（标题、主送机关、一级标题……落款、日期），认错了点一下改；文字可直接编辑，× 删除。
+3. 选择文种：「通知」（标题后不空行）或「信息简报」（标题后空一行）。
+4. 右侧是 A4 实时预览，确认后点「导出 Word」，默认文件名为标题。
+
+老版 .doc 请先用「文件转换器」转为 .docx，或复制文字后粘贴。
+
+## 开发
+
+```bash
+pip install python-docx pywebview pytest
+python -m pytest tests/gongwen
+python -m gongwen.main            # 启动界面
+python -m gongwen.main --selftest
+```
+
+- 日志：`%LOCALAPPDATA%\公文排版\logs\app.log`
+- 设计文档：`docs/superpowers/specs/2026-11-04-gongwen-formatter-design.md`

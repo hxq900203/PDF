@@ -1,0 +1,56 @@
+name: build-gongwen
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+env:
+  APP: 公文排版
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install python-docx pywebview pytest pyinstaller
+
+      - name: 运行测试
+        run: python -m pytest tests/gongwen -v
+
+      - name: PyInstaller 打包
+        run: |
+          pyinstaller build/gongwen.spec --distpath build/dist --workpath build/work --noconfirm
+          Copy-Item build/app.exe.config "build/dist/$env:APP/$env:APP.exe.config"
+
+      - name: 模拟从网上下载（给 DLL 打上“来自 Internet”标记）
+        run: |
+          Get-ChildItem "build/dist/$env:APP/_internal" -Recurse -Filter *.dll | ForEach-Object {
+            Set-Content -LiteralPath $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+          }
+
+      - name: 自检（加载 pythonnet，并排版导出示例文字）
+        run: |
+          $exe = Resolve-Path "build/dist/$env:APP/$env:APP.exe"
+          $p = Start-Process $exe -ArgumentList "--selftest" -Wait -PassThru
+          $log = "build/dist/$env:APP/selftest.log"
+          if (Test-Path $log) { Get-Content $log -Encoding utf8 }
+          if ($p.ExitCode -ne 0 -or (Get-Content $log -Encoding utf8) -ne "OK") { throw "自检失败（退出码 $($p.ExitCode)）" }
+          Remove-Item $log
+
+      - name: 压缩
+        run: Compress-Archive -Path "build/dist/$env:APP" -DestinationPath "$env:APP-windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP }}-windows
+          path: ${{ env.APP }}-windows.zip
+          retention-days: 30
