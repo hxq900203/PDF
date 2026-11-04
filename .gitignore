@@ -6,3 +6,5 @@ build/dist/
 build/work/
 *.egg-info
 .download/
+gongwen-web/dist/
+gongwen-web/node_modules/

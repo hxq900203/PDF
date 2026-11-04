@@ -1,0 +1,11 @@
+{
+  "name": "gongwen-web",
+  "private": true,
+  "description": "公文排版 网页版（单文件 HTML）",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "devDependencies": {
+    "@xmldom/xmldom": "^0.9.12"
+  }
+}
