@@ -9,6 +9,59 @@
   </style>
 </head>
 <body>
+  <header class="bar">
+    <div class="brand">公文排版</div>
+    <button id="open" class="btn">打开 Word</button>
+    <input id="file-input" type="file" accept=".docx,.doc" hidden>
+    <button id="paste" class="btn">粘贴文字</button>
+    <div class="kind" role="radiogroup" aria-label="文种">
+      <span class="kind-label">文种</span>
+      <label><input type="radio" name="kind" value="notice" checked> 通知</label>
+      <label><input type="radio" name="kind" value="brief"> 信息简报</label>
+    </div>
+    <div class="right-tools">
+      <label class="sub" title="勾选后，本机缺少的规定字体会换成本机已有的相似字体（文件拿到其他电脑上也是替代字体）">
+        <input type="checkbox" id="substitute"> 缺字体时用本机替代字体（仅适合本机打印）
+      </label>
+      <button id="selftest" class="btn">自检</button>
+      <button id="export" class="btn primary" disabled>导出 Word</button>
+    </div>
+  </header>
+  <div id="notice" class="notice" hidden>
+    <span id="notice-text"></span>
+    <button id="notice-close" class="link" aria-label="关闭">×</button>
+  </div>
+
+  <main class="main">
+    <section class="left">
+      <div class="left-head">段落 <span class="hint">点类型可修改，文字可直接编辑</span></div>
+      <div id="empty" class="empty">打开一份 Word，或粘贴文字开始<div class="empty-sub">也可以把 .docx 文件拖进页面</div></div>
+      <ol id="blocks" class="blocks"></ol>
+    </section>
+    <section class="right" id="right">
+      <div id="scaler" class="scaler"><article id="page" class="page"></article></div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="dialog">
+      <h2>粘贴文字</h2>
+      <p class="hint">每行一段。标题、序号、落款、日期会自动识别。</p>
+      <textarea id="paste-text" placeholder="在这里粘贴公文内容…"></textarea>
+      <div class="dialog-actions">
+        <button id="paste-cancel" class="btn">取消</button>
+        <button id="paste-ok" class="btn primary">识别</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="selftest-modal" class="modal" hidden>
+    <div class="dialog">
+      <h2>自检</h2>
+      <ul id="selftest-list" class="checks"><li>正在检查…</li></ul>
+      <div class="dialog-actions"><button id="selftest-close" class="btn primary">关闭</button></div>
+    </div>
+  </div>
 <!--SCRIPTS-->
 </body>
 </html>
