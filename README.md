@@ -67,3 +67,35 @@ python -m gongwen.main --selftest
 
 - 日志：`%LOCALAPPDATA%\公文排版\logs\app.log`
 - 设计文档：`docs/superpowers/specs/2026-11-04-gongwen-formatter-design.md`
+
+---
+
+# 公文排版 网页版（UOS / 离线）
+
+给不能联网的电脑（如 UOS 20 龙芯）用的版本：一个 `公文排版.html` 文件，用浏览器打开即可，不需要安装，也不联网。功能与 Windows 版相同。
+
+## 拷贝与打开
+
+1. 在能上网的电脑上获取 `公文排版.html`（GitHub → Actions → 最新一次成功的 **build-gongwen-web** → Artifacts 里的 `公文排版-网页版`）。
+2. 用 U 盘拷到单位电脑，双击用浏览器打开。
+
+## 使用
+
+- 「打开 Word」或把 .docx 拖进页面；也可以「粘贴文字」。
+- 左侧改类型、改文字、删段；右侧 A4 实时预览；选择文种后点「导出 Word」，文件保存到浏览器的「下载」文件夹，文件名为标题。
+- 第一次使用请点「自检」：检查生成 Word 是否正常、四种公文字体是否已安装，并显示浏览器信息。
+
+## 缺字体时
+
+- 预览自动用相似字体显示（如 仿宋_GB2312 → 仿宋 → 方正仿宋_GBK → 华文仿宋 → 思源宋体）。
+- 默认导出的 Word 仍使用规定字体，并附带替代提示；拿到装有规定字体的电脑上打开即为标准格式。
+- 勾选「缺字体时用本机替代字体（仅适合本机打印）」后，导出时把本机缺少的规定字体换成本机已有的相似字体。
+
+## 开发
+
+```bash
+cd gongwen-web && npm ci && npm test && cd ..
+python -m pytest tests/gongwen_web --confcutdir=tests/gongwen_web   # 与 Python 版逐项比对
+python gongwen-web/build.py                                          # 生成 gongwen-web/dist/公文排版.html
+python tools/gongwen_web_smoke.py .                                  # 界面冒烟测试
+```

@@ -25,7 +25,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: 运行测试（LibreOffice 相关测试此时自动跳过）
-        run: python -m pytest -v
+        run: python -m pytest -v --ignore=tests/gongwen_web  # 网页版测试需要 Node，在 build-gongwen-web 中运行
 
       - name: PyInstaller 打包
         run: |

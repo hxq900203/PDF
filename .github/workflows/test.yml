@@ -19,4 +19,4 @@ jobs:
       - name: 安装依赖
         run: pip install PyMuPDF pdf2docx pdfplumber openpyxl python-docx pytest
       - name: 运行测试
-        run: python -m pytest -v
+        run: python -m pytest -v --ignore=tests/gongwen_web  # 网页版测试需要 Node，在 build-gongwen-web 中运行

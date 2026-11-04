@@ -1,0 +1,48 @@
+name: build-gongwen-web
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装 LibreOffice 与中文字体（用于检查生成的 Word 能否打开）
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-noto-cjk
+
+      - name: 安装依赖
+        run: |
+          pip install python-docx PyMuPDF pytest playwright
+          cd gongwen-web && npm ci
+
+      - name: JS 单元测试
+        run: cd gongwen-web && npm test
+
+      - name: 与 Python 版逐项比对
+        run: python -m pytest tests/gongwen_web -v --confcutdir=tests/gongwen_web
+
+      - name: 生成单文件（含老浏览器语法检查）
+        run: python gongwen-web/build.py
+
+      - name: 界面冒烟测试（file:// 打开、零网络请求）
+        run: |
+          python -m playwright install --with-deps chromium
+          python tools/gongwen_web_smoke.py "$GITHUB_WORKSPACE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 公文排版-网页版
+          path: gongwen-web/dist/公文排版.html
+          retention-days: 30
